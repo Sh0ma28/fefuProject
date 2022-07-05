@@ -13,9 +13,9 @@ class MainView : View("Hello TornadoFX") {
     val controller: MyController by inject()
 
     override val root = vbox {
-        button("Открыть xls файл") {
+        button("Открыть csv файл") {
            action {
-               controller.openFile(chooseFile("Выберите файл", arrayOf(FileChooser.ExtensionFilter("xls", "*.xls"), FileChooser.ExtensionFilter("xlsx", "*.xlsx"))))
+               controller.openFile(chooseFile("Выберите файл", arrayOf(FileChooser.ExtensionFilter("csv", "*.csv"))))
            }
         }
     }
