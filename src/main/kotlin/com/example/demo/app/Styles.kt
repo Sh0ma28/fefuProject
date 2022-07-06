@@ -9,10 +9,14 @@ class Styles : Stylesheet() {
     }
 
     init {
-        label and heading {
+        root {
+            backgroundColor = multi(c("#171D28"))
+            textFill = c("#DDE2E8")
+        }
+        label {
             padding = box(10.px)
-            fontSize = 20.px
-            fontWeight = FontWeight.BOLD
+            backgroundColor = multi(c("#171D28"))
+            textFill = c("#DDE2E8")
         }
         button {
             backgroundRadius = MultiValue(arrayOf( box(5.px),box(5.px),box(5.px),box(5.px)))
