@@ -5,6 +5,7 @@ import javafx.beans.property.SimpleIntegerProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
 import javafx.scene.canvas.Canvas
+import javafx.scene.control.ScrollPane
 import javafx.scene.paint.Color
 import javafx.stage.FileChooser
 import tornadofx.*
@@ -18,25 +19,39 @@ class MainView : View("Hello TornadoFX") {
     val controller: MyController by inject()
 
     override val root = hbox {
-        vbox{
-            children.bind(controller.colors) {
-                hbox {
-                    label(it.number.value.toString())
-                    colorpicker(mode = ColorPickerMode.MenuButton) {
-                        value = it.color
-                        setOnAction { _ ->
-                            it.color = value
+//        scrollpane{
+//            setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER)
+//            style {
+//                backgroundColor = multi(c("#171D28"))
+//                padding= box(0.px)
+//                borderWidth = MultiValue(arrayOf(box(0.px)))
+//            }
+            vbox{
+                children.bind(controller.colors) {
+                    hbox {
+                        style {
+                            padding= box(10.px)
                         }
+                        label(it.number.value.toString())
+                        colorpicker(mode = ColorPickerMode.MenuButton) {
+                            value = it.color
+                            setOnAction { _ ->
+                                it.color = value
+                            }
 
+                        }
                     }
                 }
-            }
 
-        }
+            }
+//        }
         vbox {
             canvas {
                 controller.initCanvas(this)
                 val ctx = graphicsContext2D
+                style {
+                    padding= box(5.px, 0.px, 10.px, 10.px)
+                }
             }
             button("Открыть csv файл") {
                 action {
