@@ -167,6 +167,8 @@ class MyController: Controller() {
                         ((orangeEnd[2]-orangeStart[2]).toDouble()*step).toInt()+orangeStart[2], 1.0),
                     this
                 ))
+            } else if (nums_list[x] == max(nums.toList())) {
+                temp_colors.add(ColorReference(nums_list[x], Color.valueOf("#990000"), this))
             } else {
                 temp_colors.add(ColorReference(nums_list[x], Color.valueOf("#000000"), this))
             }
