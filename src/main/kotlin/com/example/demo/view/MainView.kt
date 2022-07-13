@@ -19,19 +19,12 @@ class MainView : View("Hello TornadoFX") {
     val controller: MyController by inject()
 
     override val root = hbox {
-//        scrollpane{
-//            setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER)
-//            style {
-//                backgroundColor = multi(c("#171D28"))
-//                padding= box(0.px)
-//                borderWidth = MultiValue(arrayOf(box(0.px)))
-//            }
+        scrollpane{
+            hbarPolicy = ScrollPane.ScrollBarPolicy.NEVER
+
             vbox{
                 children.bind(controller.colors) {
                     hbox {
-                        style {
-                            padding= box(10.px)
-                        }
                         label(it.number.value.toString())
                         colorpicker(mode = ColorPickerMode.MenuButton) {
                             value = it.color
@@ -44,13 +37,18 @@ class MainView : View("Hello TornadoFX") {
                 }
 
             }
-//        }
+        }
         vbox {
             canvas {
                 controller.initCanvas(this)
                 val ctx = graphicsContext2D
                 style {
                     padding= box(5.px, 0.px, 10.px, 10.px)
+                }
+                setOnMouseMoved{
+                    val tool = tooltip {
+                        text = "x: ${it.x}, y: ${it.y}, value: ${controller.rows[it.x.toInt()][it.y.toInt()]}"
+                    }
                 }
             }
             button("Открыть csv файл") {
@@ -68,11 +66,11 @@ class MainView : View("Hello TornadoFX") {
     }
 }
 
-class ColorReference(number: Number, color: String, controller: MyController) {
+class ColorReference(number: Number, color: Color, controller: MyController) {
     val number = SimpleIntegerProperty()
     val controller: MyController
 
-    var color: javafx.scene.paint.Color = javafx.scene.paint.Color.valueOf(color)
+    var color: Color = color
         set(value) {
             field = value
             this.controller.redrawCanvas()
@@ -89,10 +87,6 @@ class MyController: Controller() {
     var colors: ObservableList<ColorReference> = FXCollections.observableArrayList()
     var rows = FXCollections.observableArrayList<MutableList<String>>()
     lateinit var canvas: Canvas
-
-    init {
-
-    }
 
     fun redrawCanvas() {
         val ctx = canvas.graphicsContext2D
@@ -119,7 +113,7 @@ class MyController: Controller() {
 
     fun IsPowerOf(n: Int, p: Int): Boolean {
         var log = (Math.log(p.toDouble()) / Math.log(n.toDouble())).toInt()
-        return Math.pow(n.toDouble(), log.toDouble()) == p.toDouble()
+        return Math.pow(n.toDouble(), log.toDouble()) == p.toDouble() && p != 0
     }
 
     fun openFile(files: List<File>) {
@@ -145,8 +139,37 @@ class MyController: Controller() {
         // sort nums_list
         nums_list.sort()
         var temp_colors = mutableListOf<ColorReference>()
+        var blueStart: List<Int> = listOf(0x00, 0x03, 0xc4)
+        var blueEnd: List<Int> = listOf(0x03, 0xdb, 0xfc)
+        var orangeStart: List<Int> = listOf(0xf0, 0xfc, 0x03)
+        var orangeEnd: List<Int> = listOf(0xfc, 0x80, 0x03)
         for (x in nums_list.indices) {
-            temp_colors.add(ColorReference(nums_list[x], "#000010", this))
+            if (nums_list[x] == 1) {
+                temp_colors.add(ColorReference(nums_list[x], Color.valueOf("#070038"), this))
+            } else if (IsPowerOf(2, nums_list[x])) {
+                var step = Math.log(nums_list[x].toDouble())/Math.log(2.0) / (Math.log(max(nums.toList()).toDouble())/Math.log(2.0)).toInt().toDouble()
+                temp_colors.add(ColorReference(
+                    nums_list[x], Color.rgb(
+                        ((blueEnd[0]-blueStart[0]).toDouble()*step).toInt()+blueStart[0],
+                        ((blueEnd[1]-blueStart[1]).toDouble()*step).toInt()+blueStart[1],
+                        ((blueEnd[2]-blueStart[2]).toDouble()*step).toInt()+blueStart[2], 1.0),
+                    this
+                ))
+            } else if (nums_list[x] % 3 == 0 && IsPowerOf(2, nums_list[x]/3)) {
+                val step =
+                    Math.log(nums_list[x].toDouble() / 3.0) / Math.log(2.0) / (Math.log(max(nums.toList()).toDouble() / 3.0) / Math.log(
+                        2.0
+                    )).toInt().toDouble()
+                temp_colors.add(ColorReference(
+                    nums_list[x], Color.rgb(
+                        ((orangeEnd[0]-orangeStart[0]).toDouble()*step).toInt()+orangeStart[0],
+                        ((orangeEnd[1]-orangeStart[1]).toDouble()*step).toInt()+orangeStart[1],
+                        ((orangeEnd[2]-orangeStart[2]).toDouble()*step).toInt()+orangeStart[2], 1.0),
+                    this
+                ))
+            } else {
+                temp_colors.add(ColorReference(nums_list[x], Color.valueOf("#000000"), this))
+            }
             // TODO: Set default colors here
 
         }

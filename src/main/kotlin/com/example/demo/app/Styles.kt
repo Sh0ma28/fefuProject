@@ -2,6 +2,10 @@ package com.example.demo.app
 
 import javafx.scene.text.FontWeight
 import tornadofx.*
+import javafx.scene.control.ScrollPane
+import javafx.scene.paint.CycleMethod
+import javafx.scene.paint.LinearGradient
+import javafx.scene.paint.Stop
 
 class Styles : Stylesheet() {
     companion object {
@@ -30,6 +34,25 @@ class Styles : Stylesheet() {
             backgroundColor = multi(c("#171D28"))
             textFill = c("#DDE2E8")
             startMargin = 10.px
+        }
+        scrollPane {
+                backgroundColor = multi(c("#171D28"))
+                borderWidth = MultiValue(arrayOf(box(0.px)))
+        }
+        scrollBar {
+            backgroundColor = multi(c("#171D28"))
+        }
+        thumb {
+            backgroundColor = multi(LinearGradient(
+                0.0, 0.0, 1.0, 0.0, true, CycleMethod.NO_CYCLE,
+                Stop(0.0, c("#03EBE0")),
+                Stop(1.0, c("#01F5EA"))
+            ))
+        }
+        viewport {
+            backgroundColor = multi(c("#171D28"))
+            padding= box(10.px)
+            borderWidth = MultiValue(arrayOf(box(0.px)))
         }
     }
 }
