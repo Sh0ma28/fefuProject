@@ -1,22 +1,29 @@
 package com.example.demo.view
 
 import com.github.doyaaaaaken.kotlincsv.dsl.csvReader
+import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.property.SimpleIntegerProperty
 import javafx.collections.FXCollections
 import javafx.collections.ObservableList
+import javafx.embed.swing.SwingFXUtils
 import javafx.scene.canvas.Canvas
 import javafx.scene.control.ScrollPane
+import javafx.scene.image.WritableImage
 import javafx.scene.paint.Color
 import javafx.stage.FileChooser
+import javafx.util.Duration
 import tornadofx.*
+import java.awt.image.BufferedImage
+import java.awt.image.RenderedImage
 import java.io.File
 import java.util.Collections.max
-import java.util.Collections.min
-import kotlin.contracts.contract
+import javax.imageio.ImageIO
 
-class MainView : View("Hello TornadoFX") {
+
+class MainView : View("Построитель") {
 
     val controller: MyController by inject()
+
 
     override val root = hbox {
         scrollpane{
@@ -46,29 +53,54 @@ class MainView : View("Hello TornadoFX") {
                     padding= box(5.px, 0.px, 10.px, 10.px)
                 }
                 setOnMouseMoved{
-                    val tool = tooltip {
-                        text = "x: ${it.x}, y: ${it.y}, value: ${controller.rows[it.x.toInt()][it.y.toInt()]}"
+                    if (0<=((it.x-controller.axisOffset)/2).toInt() && ((it.x-controller.axisOffset)/2).toInt() < controller.rows.size && 0 <= ((it.y-controller.axisOffset)/2).toInt() && ((it.y-controller.axisOffset)/2).toInt() < controller.rows.size) {
+                        tooltip {
+                            text = "x: ${it.x}, y: ${it.y}, value: ${controller.rows[((it.x-controller.axisOffset)/2).toInt()][((it.x-controller.axisOffset)/2).toInt()]}"
+                        }
                     }
                 }
             }
-            button("Открыть csv файл") {
-                action {
-                    controller.openFile(
-                        chooseFile(
-                            "Выберите файл",
-                            arrayOf(FileChooser.ExtensionFilter("csv", "*.csv"))
-                        )
-                    )
+            hbox {
+                vbox {
+                    button("Открыть csv файл") {
+                        action {
+                            controller.openFile(
+                                chooseFile(
+                                    "Выберите файл",
+                                    arrayOf(FileChooser.ExtensionFilter("csv", "*.csv"))
+                                )
+                            )
+                        }
+                    }
+                    button {
+                        text = "Открыть файл с легендой"
+                        action {
+                            controller.readLegendCsv(
+                                chooseFile(
+                                    "Выберите файл",
+                                    arrayOf(FileChooser.ExtensionFilter("csv", "*.csv"))
+                                )
+                            )
+                        }
+                    }
+                }
+                button("Сохранить картинку") {
+                    hiddenWhen(!controller.ready_to_save)
+                    action {
+                        controller.saveImage()
+                    }
                 }
             }
         }
 
     }
+
 }
 
 class ColorReference(number: Number, color: Color, controller: MyController) {
     val number = SimpleIntegerProperty()
     val controller: MyController
+
 
     var color: Color = color
         set(value) {
@@ -86,10 +118,20 @@ class ColorReference(number: Number, color: Color, controller: MyController) {
 class MyController: Controller() {
     var colors: ObservableList<ColorReference> = FXCollections.observableArrayList()
     var rows = FXCollections.observableArrayList<MutableList<String>>()
+    var ready_to_save: SimpleBooleanProperty = SimpleBooleanProperty(false);
+    val axisOffset = 35.0
     lateinit var canvas: Canvas
+    var legendY = ""
+    var legendX = ""
+    var startX = ""
+    var endX = ""
+    var startY = ""
+    var endY = ""
 
     fun redrawCanvas() {
         val ctx = canvas.graphicsContext2D
+        ctx.fill = Color.WHITE
+        ctx.fillRect(0.0, 0.0, canvas.width, canvas.height)
         for (i in 0 until rows.size) {
             for (j in 0 until rows[i].size) {
                 for (k in 0 until colors.size) {
@@ -98,14 +140,22 @@ class MyController: Controller() {
                         break
                     }
                 }
-                ctx.fillRect(i.toDouble(), j.toDouble(), i.toDouble(), j.toDouble())
+                ctx.fillRect(i.toDouble()*2+axisOffset, (rows[i].size-1-j.toDouble())*2+axisOffset, 2.0, 2.0)
             }
         }
+        ctx.fill = Color.BLACK
+        ctx.fillText(legendY, 5.0, canvas.height/2)
+        ctx.fillText(legendX,  canvas.height/2, axisOffset*1.5+rows.size*2+5)
+        ctx.fillText(startX, axisOffset+3, axisOffset+rows.size*2+12)
+        ctx.fillText(startY, 0.0, axisOffset+rows.size*2)
+        ctx.fillText(endX, rows.size*2.0, axisOffset+rows.size*2+12)
+        ctx.fillText(endY, 0.0, axisOffset)
     }
     fun initCanvas(canvas: Canvas) {
         this.canvas = canvas
-        canvas.heightProperty().bind(rows.sizeProperty)
-        canvas.widthProperty().bind(rows.sizeProperty)
+        canvas.heightProperty().bind(rows.sizeProperty.multiply(2).plus(2*axisOffset))
+        canvas.widthProperty().bind(rows.sizeProperty.multiply(2).plus(2*axisOffset))
+
         colors.onChange {
             redrawCanvas()
         }
@@ -117,6 +167,8 @@ class MyController: Controller() {
     }
 
     fun openFile(files: List<File>) {
+        rows.clear()
+        colors.clear()
         if (files.isEmpty()) {
             println("File was not opened")
             return
@@ -172,11 +224,46 @@ class MyController: Controller() {
             } else {
                 temp_colors.add(ColorReference(nums_list[x], Color.valueOf("#000000"), this))
             }
-            // TODO: Set default colors here
 
         }
         colors.addAll(temp_colors)
-        println(min(nums.toList()).toString() + max(nums.toList()).toString())
+        ready_to_save.value = true
+    }
+
+    fun readLegendCsv(files: List<File>) {
+        if (files.isEmpty()) {
+            println("File was not opened")
+            return
+        }
+        if (files.size > 1) {
+            println("More than one file was selected")
+            return
+        }
+        val file = files[0]
+        val rows_to_handle = csvReader().readAll(file)
+
+        legendX = rows_to_handle[0][5]
+        legendY = rows_to_handle[0][6]
+        startX = rows_to_handle[0][1]
+        endX = rows_to_handle[0][2]
+        startY = rows_to_handle[0][3]
+        endY = rows_to_handle[0][4]
+
+        redrawCanvas()
+    }
+
+    fun saveImage() {
+        val fileChooser = FileChooser()
+        fileChooser.extensionFilters.add(FileChooser.ExtensionFilter("PNG", "*.png"))
+        val file = fileChooser.showSaveDialog(null)
+        if (file != null) {
+            val writableImage = WritableImage(canvas.width.toInt(),
+                canvas.height.toInt())
+            canvas.snapshot(null, writableImage)
+            val renderedImage: RenderedImage = SwingFXUtils.fromFXImage(writableImage, null)
+
+            ImageIO.write(renderedImage, "png", file)
+        }
     }
 
 
